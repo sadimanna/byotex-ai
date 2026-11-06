@@ -75,6 +75,44 @@ Then:
 
 Compile safety: `latexmk -norc` stops a project's `.latexmkrc` (which is Perl code) from running, and `shell_escape=f` turns off `\write18`.
 
+## Missing LaTeX packages (`.sty` not found)
+
+If your document uses a package your LaTeX doesn't have, compiling fails and **Problems** shows the error with its file and line, for example:
+
+```
+main.tex:5: LaTeX Error: File `booktabs.sty' not found.
+```
+
+BYOTeX.AI doesn't install packages for you yet. How to add one depends on your LaTeX:
+
+| Your LaTeX | What to do |
+|---|---|
+| **TinyTeX** (including the one the app installs) | `tlmgr install booktabs`, with no admin password needed, because TinyTeX lives in your home folder. `tlmgr` comes with TinyTeX. |
+| **MacTeX** (full) | Usually nothing: the full version already includes almost every package. |
+| **BasicTeX**, or TeX Live installed system-wide | `sudo tlmgr install booktabs` (needs your admin password). |
+| **TeX Live from Linux packages** | Install the collection that contains it, e.g. `sudo apt install texlive-latex-extra` (Debian/Ubuntu) or `sudo dnf install 'tex(booktabs.sty)'` (Fedora). |
+| **MiKTeX** (Windows) | Usually nothing: MiKTeX installs missing packages during the compile, or asks first, depending on its settings. |
+
+**The package name isn't always the file name.** `tikz.sty` comes from the `pgf` package, and `algorithmic.sty` from `algorithms`. To find the right package for a missing file:
+
+```bash
+tlmgr search --global --file "/tikz.sty"
+```
+
+Then run `tlmgr install <package>` and click **Compile** again.
+
+If `tlmgr` says **"Local TeX Live (2025) is older than remote repository (2026)"**, a new TeX Live edition has come out since yours was installed, and the old `tlmgr` can't fetch packages from it. You have two options:
+- **Update your TeX** to the current edition: reinstall TinyTeX from the app, or get the new BasicTeX/MacTeX.
+- **Keep it, and point `tlmgr` at the frozen archive for your year** (change `2025` to your version; prefix with `sudo` for BasicTeX or a system TeX Live):
+
+  ```bash
+  tlmgr option repository https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2025/tlnet-final
+  ```
+
+  After that, `tlmgr search` and `tlmgr install` work again. That edition no longer receives updates, but every package from that year is available.
+
+If the terminal says `tlmgr: command not found`, it isn't on your PATH. Use the folder shown in **Build → LaTeX Installation…**, for example `~/Library/TinyTeX/bin/universal-darwin/tlmgr install booktabs` on macOS, or `~/.TinyTeX/bin/x86_64-linux/tlmgr …` on Linux.
+
 ## Backend modules (`server/`)
 
 - `index.js`: Express gateway. It binds to `127.0.0.1` only, rejects unexpected `Host` headers (blocks DNS rebinding), and requires a per-launch session token on every `/api` call.
