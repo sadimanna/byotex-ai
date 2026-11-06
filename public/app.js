@@ -340,8 +340,24 @@ async function selectNode(desc) {
 }
 
 /* ------------------------------------------------------------------ editor */
-const code = () => $('#code');
+// The editor: CodeMirror (public/editor.js) when it loaded, otherwise the plain <textarea>. Both expose
+// the same small interface (value, selectionStart/End, setSelectionRange, scrollTop, disabled, events).
+const code = () => window.BYOTeXEditor?.adapter || $('#code');
+const editorReady = new Promise((resolve) => {
+  if (window.BYOTeXEditor) return resolve(true);
+  window.addEventListener('byotex-editor-ready', () => resolve(true), { once: true });
+  setTimeout(() => resolve(false), 5000); // module failed to load → keep the textarea
+});
+/** Labels and BibTeX keys for editor autocomplete (\ref{…}, \cite{…}). */
+window.BYOTeXCompletionData = () => {
+  const files = Object.values(state.scan?.files || {});
+  return {
+    labels: files.filter((f) => f.kind === 'tex').flatMap((f) => f.labels.map((l) => ({ name: l.name, detail: `${l.env || 'label'} · ${f.path.split('/').pop()}:${l.line}` }))),
+    cites: files.filter((f) => f.kind === 'bib').flatMap((f) => f.entries.map((e) => ({ key: e.key, detail: [e.fields.year, (e.fields.title || '').slice(0, 60)].filter(Boolean).join(' · ') }))),
+  };
+};
 function updateGutter() {
+  if (code().isCM) return; // CodeMirror draws its own line numbers
   const n = code().value.split('\n').length;
   const g = $('#gutter');
   if (g.dataset.n !== String(n)) {
@@ -401,7 +417,7 @@ function gotoLine(line, endLine) {
   const b = endLine && endLine >= line ? lineOffset(t, endLine + 1) - (endLine + 1 > t.split('\n').length ? 0 : 1) : a;
   ta.focus();
   ta.setSelectionRange(a, Math.max(a, b));
-  ta.scrollTop = Math.max(0, (line - 4) * edLineHeight());
+  if (ta.isCM) ta.revealPos(a); else ta.scrollTop = Math.max(0, (line - 4) * edLineHeight());
   updateGutter();
   updatePos();
 }
@@ -1238,7 +1254,7 @@ const prefs = Object.assign({
   leftHidden: false,
   logCollapsed: false,
   edFont: 12, chatFont: 12, conFont: 11,
-  edFamily: 'Menlo', edWeight: 400,
+  edFamily: 'Menlo', edWeight: 400, edWrap: true,
   uiColor: '#000000', mutedColor: '#000000', edColor: '#000000', chatColor: '#000000', conColor: '#c0c0c0', conBg: '#000000',
   pdfZoom: 'width',
   engine: 'pdflatex',
@@ -1255,6 +1271,7 @@ function applyPrefs() {
   root.setProperty('--ed-lh', `${edLineHeight()}px`);
   root.setProperty('--ed-font', `"${prefs.edFamily}", var(--mono)`);
   root.setProperty('--ed-fw', String(prefs.edWeight));
+  window.BYOTeXEditor?.setWrap(prefs.edWrap);
   root.setProperty('--chat-fs', `${prefs.chatFont}px`);
   root.setProperty('--con-fs', `${prefs.conFont}px`);
   root.setProperty('--ui-fg', prefs.uiColor);
@@ -1298,6 +1315,7 @@ function refreshMenuChecks() {
     'toggle-log': !prefs.logCollapsed,
     'toggle-autocompile': prefs.autoCompile,
     'tree-view': prefs.treeView,
+    'toggle-wrap': prefs.edWrap,
     layout: prefs.chatLayout,
     'pdf-side': prefs.pdfSide,
     engine: prefs.engine,
@@ -1522,6 +1540,8 @@ const commands = {
   'pdf-toggle': () => commands['pdf-side'](prefs.pdfSide === 'none' ? 'right' : 'none'),
   'pdf-swap': () => setPref('pdfSide', prefs.pdfSide === 'left' ? 'right' : 'left'),
   'font-dialog': fontDialog,
+  'toggle-wrap': () => setPref('edWrap', !prefs.edWrap),
+  find: () => (window.BYOTeXEditor ? window.BYOTeXEditor.openSearch() : msgBox('Find', 'Find & Replace needs the CodeMirror editor, which did not load.')),
   'font-step': (arg) => setPref('edFont', Math.max(8, Math.min(32, prefs.edFont + Number(arg)))),
   compile,
   'pdf-prev': () => viewer?.goto(viewer.current - 1),
@@ -1565,7 +1585,7 @@ function wire() {
   ta.addEventListener('keyup', updatePos);
   ta.addEventListener('click', updatePos);
   ta.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab') { e.preventDefault(); const s = ta.selectionStart; ta.setRangeText('  ', s, ta.selectionEnd, 'end'); setDirty(true); }
+    if (e.key === 'Tab' && !ta.isCM) { e.preventDefault(); const s = ta.selectionStart; ta.setRangeText('  ', s, ta.selectionEnd, 'end'); setDirty(true); }
   });
 
   $('#sendBtn').addEventListener('click', sendPrompt);
@@ -1628,6 +1648,7 @@ function wire() {
 }
 
 (async function init() {
+  await editorReady;
   wire();
   applyPrefs();
   renderTargets();

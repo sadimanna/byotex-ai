@@ -15,6 +15,9 @@
   - a **local model** (Ollama, LM Studio, llama.cpp, vLLM);
   - **OpenCode's free models**, with no key at all.
 - **Reviewable edits:** every AI change arrives as a diff with an *Accept* checkbox per hunk. Files are backed up before every write, and a write is refused if the file changed on disk in the meantime.
+- **History with undo:** *File → History* lists every AI edit (with its prompt), editor save, restore and added citation, shows how the file differs now, and restores any earlier version.
+- **Real citations, never invented ones:** *Cite…* searches **Crossref** and **arXiv** by title, keywords, DOI or arXiv id, fetches the official BibTeX (from doi.org or arXiv), checks it isn't already in your `.bib`, adds it, and inserts `\cite{key}`. When the AI needs a reference it writes `[[cite: …]]`, which becomes a link to this search.
+- **A proper LaTeX editor** (CodeMirror 6): syntax highlighting, **Find & Replace** (Ctrl/Cmd+F, with regex), bracket matching, undo history, soft wrap, and autocomplete for `\ref{…}` (your labels), `\cite{…}` (your BibTeX keys, with titles), `\begin{…}` (inserts the matching `\end`) and common commands.
 - **Compile and preview:** `latexmk` with pdfLaTeX, XeLaTeX or LuaLaTeX, and a PDF.js preview that keeps your place when you recompile.
 - **SyncTeX in both directions:** *Show in PDF* jumps from the cursor to the PDF; double-click the PDF to jump to the source line.
 - **Understands your project:**
@@ -25,7 +28,7 @@
   - runs only on your own computer (`127.0.0.1`);
   - API keys are encrypted on disk (AES-256-GCM) and never sent back to the browser;
   - the AI can only *suggest* edits; it never writes files itself.
-- **Helps you get LaTeX:** it detects MacTeX, TeX Live, MiKTeX and TinyTeX, or installs TinyTeX for you without admin rights.
+- **Helps you get LaTeX:** it detects MacTeX, TeX Live, MiKTeX and TinyTeX, or installs TinyTeX for you without admin rights. When a compile fails with *File `x.sty` not found*, it finds the package that provides it and installs it (or shows the exact `sudo tlmgr …` command for system installs).
 - **Retro and adjustable:** layouts with chat in a tab, below the editor or beside it; the PDF on the left or right; a document outline; and choices for font, size and colour.
 
 | Diff review | Source ↔ PDF (SyncTeX) |
@@ -85,7 +88,11 @@ If your document uses a package your LaTeX doesn't have, compiling fails and **P
 main.tex:5: LaTeX Error: File `booktabs.sty' not found.
 ```
 
-BYOTeX.AI doesn't install packages for you yet. How to add one depends on your LaTeX:
+BYOTeX.AI then opens **Missing LaTeX Packages**. It finds the package that provides the file with `tlmgr`, using the archive for your year automatically if your TeX Live is an older edition (see below). Then:
+- for installs you can write to, such as **TinyTeX**, it offers a one-click **Install** button, with progress in the Log Console;
+- for system installs that need admin rights (**BasicTeX**, **MacTeX**, a system **TeX Live**), it shows the exact `sudo tlmgr …` command with a **Copy** button.
+
+Click **Compile Again** afterwards. The rest of this section is for doing it by hand. How to add a package depends on your LaTeX:
 
 | Your LaTeX | What to do |
 |---|---|
@@ -123,7 +130,9 @@ If the terminal says `tlmgr: command not found`, it isn't on your PATH. Use the 
 - `prompt.js` + `llm.js` (Module 2): wraps the request with the project outline, the targeted files or line ranges, and the available citation keys. Responses stream from **Anthropic** (Messages API), **OpenAI**, **Google Gemini** (via its OpenAI-compatible endpoint), **OpenRouter**, or any **OpenAI-compatible local endpoint** (Ollama, LM Studio, llama.cpp, vLLM).
 - `patch.js` + `diff.js` (Module 3): parses the model's `<<<<<<< EDIT path … ======= … >>>>>>> END` blocks. Each block is matched exactly first, then with whitespace-tolerant matching, and ambiguous or missing matches are reported. It then builds an LCS line diff split into hunks. Only the accepted hunks are written, after checking that the file has not changed on disk since the proposal. Each write first backs up the file to `<project>/.byotex-backups/<timestamp>/` and then replaces it atomically.
 - `opencode.js`: the OpenCode provider (private server, tool-less sessions, event streaming, free-limit detection, npm install).
-- `texenv.js`: finds the TeX tools (a configured folder first, then PATH, then the standard install locations) and runs the TinyTeX installer.
+- `cite.js`: citation search (Crossref, arXiv), BibTeX from doi.org, key generation, duplicate check, appending to `.bib`.
+- `vendor.js`: serves the CodeMirror editor modules from `node_modules` with a generated import map, allowed by its hash in the Content-Security-Policy (no CDN, no build step).
+- `texenv.js`: finds the TeX tools (a configured folder first, then PATH, then the standard install locations) runs the TinyTeX installer, and looks up and installs missing packages with `tlmgr`.
 - `compile.js`: the latexmk runner and the `.log` parser. It follows TeX's open-file stack so each warning is attributed to the file it came from.
 - `logger.js` (Module 4): the log bus behind the console.
 

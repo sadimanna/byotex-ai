@@ -322,3 +322,16 @@ label { user-select: none; }
 .cite-info { min-height: 2.6em; }
 .cite-actions { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 a.cite-req { color: #0000c0; text-decoration: underline; background: #ffffc0; }
+
+/* CodeMirror editor (public/editor.js) */
+.ed-body.cm-active > .gutter, .ed-body.cm-active > .code { display: none; }
+.cm-host { flex: 1; min-width: 0; min-height: 0; display: flex; }
+.cm-host .cm-editor { flex: 1; min-width: 0; -webkit-font-smoothing: auto; }
+.cm-panels { background: var(--face) !important; color: #000 !important; border-color: var(--shadow) !important; font: 11px var(--font); }
+.cm-panel.cm-search { padding: 4px 6px !important; }
+.cm-panel.cm-search input[type=text], .cm-panel.cm-search input:not([type]) { background: #fff; border: 0; box-shadow: var(--sunken); padding: 3px 4px; font: 12px var(--mono); border-radius: 0; }
+.cm-panel.cm-search button { background: var(--face) !important; background-image: none !important; border: 0 !important; box-shadow: var(--raised); border-radius: 0 !important; padding: 2px 8px; font: 11px var(--font); color: #000; }
+.cm-panel.cm-search button:active { box-shadow: var(--pressed); }
+.cm-panel.cm-search label { font: 11px var(--font); }
+.cm-panel.cm-search [name=close] { box-shadow: none !important; }
+.cm-tooltip-autocomplete ul { font-family: var(--mono) !important; }

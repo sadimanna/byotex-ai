@@ -6,6 +6,7 @@
 <meta name="byotex-token" content="__BYOTEX_TOKEN__">
 <title>BYOTeX.AI LaTeX Workspace</title>
 <link rel="stylesheet" href="style.css">
+<!--IMPORTMAP-->
 </head>
 <body>
 <div id="app" class="window">
@@ -23,6 +24,7 @@
         <div class="sep"></div>
         <div class="mi" data-cmd="save">Save<span class="sc">Ctrl+S</span></div>
         <div class="mi" data-cmd="revert">Revert File</div>
+        <div class="mi" data-cmd="find">Find / Replace...<span class="sc">Ctrl+F</span></div>
         <div class="mi" data-cmd="history">History...<span class="sc">Ctrl+Shift+H</span></div>
         <div class="sep"></div>
         <div class="mi" data-cmd="settings">Settings...</div>
@@ -54,6 +56,7 @@
         <div class="mi radio" data-cmd="pdf-side" data-arg="left">PDF Preview: Left</div>
         <div class="mi radio" data-cmd="pdf-side" data-arg="right">PDF Preview: Right</div>
         <div class="sep"></div>
+        <div class="mi chk" data-cmd="toggle-wrap">Wrap Long Lines</div>
         <div class="mi" data-cmd="font-dialog">Fonts &amp; Colors...</div>
         <div class="mi" data-cmd="font-step" data-arg="1">Editor Font Larger<span class="sc">Ctrl+Shift+.</span></div>
         <div class="mi" data-cmd="font-step" data-arg="-1">Editor Font Smaller<span class="sc">Ctrl+Shift+,</span></div>
@@ -218,6 +221,7 @@
 </div>
 <div id="modalLayer"></div>
 <script src="pdfview.js"></script>
+<script type="module" src="editor.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

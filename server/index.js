@@ -14,6 +14,7 @@ const patch = require('./patch');
 const prompt = require('./prompt');
 const latex = require('./compile');
 const texenv = require('./texenv');
+const vendor = require('./vendor');
 
 const PORT = Number(process.env.PORT || 4198);
 const HOST = '127.0.0.1';
@@ -57,18 +58,20 @@ app.use((req, res, next) => {
   if (![`127.0.0.1:${PORT}`, `localhost:${PORT}`].includes(host)) return res.status(403).send('Forbidden host');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: blob:; font-src 'self' data: blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; object-src 'none'");
+  // The inline import map (CodeMirror modules) is allowed by its hash; no other inline script runs.
+  res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' ${vendor.build().cspHash}; img-src 'self' data: blob:; font-src 'self' data: blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; object-src 'none'`);
   next();
 });
 
 app.get('/', (req, res) => {
-  const html = fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8').replace('__BYOTEX_TOKEN__', TOKEN);
+  const html = fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8').replace('__BYOTEX_TOKEN__', TOKEN).replace('<!--IMPORTMAP-->', vendor.build().tag);
   res.type('html').set('Cache-Control', 'no-store').send(html);
 });
 app.use(express.static(PUBLIC, { index: false }));
 // PDF.js (renderer, worker, CMaps, standard fonts) served locally — no CDN, works offline.
 const PDFJS = path.join(__dirname, '..', 'node_modules', 'pdfjs-dist');
 for (const sub of ['build', 'cmaps', 'standard_fonts']) app.use(`/vendor/pdfjs/${sub}`, express.static(path.join(PDFJS, sub), { index: false }));
+vendor.mount(app, express); // CodeMirror (editor) modules
 
 // Every API call needs the per-launch session token (header, or ?token= for EventSource/img).
 const tokenBuf = Buffer.from(TOKEN);
