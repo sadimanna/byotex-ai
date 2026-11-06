@@ -122,3 +122,19 @@ test('compiles the sample paper end to end (skipped when LaTeX is not installed)
   // the sample deliberately cites a key that is missing from refs.bib
   assert.ok(r.warnings.some((w) => /izacard2021fid/.test(w.message) && w.path === 'sections/method.tex'));
 });
+
+test('citation helpers: BibTeX splitting/formatting, keys, arXiv feed parsing (offline)', () => {
+  const cite = require('../server/cite');
+  const e = cite.splitEntry(' @inproceedings{Karpukhin_2020, title={Dense Passage Retrieval for {Open-Domain} QA}, author={Karpukhin, Vladimir and Oguz, Barlas}, year={2020}, pages={6769–6781}}');
+  assert.strictEqual(e.type, 'inproceedings');
+  assert.deepStrictEqual(e.fields.map(([k]) => k), ['title', 'author', 'year', 'pages']);
+  assert.strictEqual(e.fields[0][1], '{Dense Passage Retrieval for {Open-Domain} QA}');
+  const out = cite.format(e.type, 'karpukhin2020dense', e.fields);
+  assert.match(out, /^@inproceedings\{karpukhin2020dense,\n {2}title\s+= \{Dense/);
+  const item = { authors: ['Karpukhin, Vladimir'], year: 2020, title: 'Dense Passage Retrieval for Open-Domain Question Answering' };
+  assert.strictEqual(cite.makeKey(item, new Set()), 'karpukhin2020dense');
+  assert.strictEqual(cite.makeKey(item, new Set(['karpukhin2020dense'])), 'karpukhin2020densea');
+  const feed = '<feed><entry><id>http://arxiv.org/abs/2007.01282v2</id><published>2020-07-02T17:44:57Z</published><title>Leveraging Passage\n  Retrieval</title><author><name>Gautier Izacard</name></author><author><name>Edouard Grave</name></author><arxiv:primary_category term="cs.CL"/></entry></feed>';
+  const [a] = cite.parseArxivFeed(feed);
+  assert.deepStrictEqual([a.arxiv, a.year, a.title, a.authors[0], a.category], ['2007.01282', 2020, 'Leveraging Passage Retrieval', 'Izacard, Gautier', 'cs.CL']);
+});

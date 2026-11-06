@@ -162,6 +162,31 @@ app.get('/api/raw', route((req, res) => {
   res.set({ 'Content-Security-Policy': csp, 'Cache-Control': 'no-store' }).type(MIME[ext]).send(fs.readFileSync(abs));
 }));
 
+// ---- Verified citations (Crossref / arXiv) ---------------------------------------------------
+const cite = require('./cite');
+app.get('/api/cite/search', route(async (req, res) => res.json(await cite.search(req.query.q))));
+app.post('/api/cite/bibtex', route(async (req, res) => {
+  const it = req.body?.item || {};
+  const item = {
+    source: it.source === 'arxiv' ? 'arxiv' : 'crossref',
+    doi: /^10\.\d{4,9}\/\S+$/.test(it.doi || '') ? it.doi : null,
+    arxiv: /^\d{4}\.\d{4,5}$/.test(it.arxiv || '') ? it.arxiv : null,
+    title: String(it.title || '').slice(0, 500),
+    authors: (Array.isArray(it.authors) ? it.authors : []).map(String).slice(0, 100),
+    year: Number(it.year) || null,
+    category: String(it.category || '').slice(0, 40),
+    url: /^https:\/\/(doi\.org|arxiv\.org)\//.test(it.url || '') ? it.url : '',
+  };
+  if (!item.doi && !item.arxiv) throw ws.httpErr(400, 'Result has no DOI or arXiv id');
+  res.json(await cite.bibtexFor(settings.workspaceRoot, item));
+}));
+app.post('/api/cite/add', route((req, res) => {
+  const { bibFile, bibtex, note } = req.body || {};
+  const r = cite.addToBib(settings.workspaceRoot, bibFile || null, String(bibtex || ''), String(note || 'Added a citation').slice(0, 200));
+  rescan();
+  res.json(r);
+}));
+
 // ---- Change history ---------------------------------------------------------------------
 const { diffLines, analyze } = require('./diff');
 app.get('/api/history', route((req, res) => {

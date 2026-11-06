@@ -306,3 +306,19 @@ label { user-select: none; }
 .hist-src { font-weight: bold; }
 .hist-detail { overflow: auto; background: var(--face); }
 .hist-head { font-weight: bold; margin-bottom: 4px; }
+
+/* Find Reference */
+.cite-search { display: flex; gap: 6px; margin-bottom: 8px; }
+.cite-main { display: grid; grid-template-columns: 1fr 380px; gap: 8px; height: 58vh; min-height: 320px; }
+.cite-results { overflow: auto; padding: 2px; }
+.cite-row { padding: 4px 6px; border-bottom: 1px dotted var(--shadow); cursor: default; }
+.cite-row.sel { background: var(--sel); color: var(--seltext); }
+.cite-title { font-weight: bold; }
+.cite-meta, .cite-id { font-size: 11px; }
+.cite-id { font-family: var(--mono); }
+.cite-src { font-family: var(--font); font-weight: bold; padding: 0 3px; border: 1px solid currentColor; }
+.cite-side { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.cite-bib { flex: 1; margin: 0; overflow: auto; padding: 4px 6px; font: 11px/1.4 var(--mono); white-space: pre-wrap; -webkit-font-smoothing: auto; }
+.cite-info { min-height: 2.6em; }
+.cite-actions { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+a.cite-req { color: #0000c0; text-decoration: underline; background: #ffffc0; }
