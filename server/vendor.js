@@ -45,8 +45,9 @@ function build() {
   const pkgs = collect();
   const imports = {};
   for (const [name, pj] of pkgs) {
-    const entry = entryOf(pj);
-    if (entry) imports[name] = `/vendor/npm/${name}/${entry.replace(/^\.\//, '')}`;
+    const entry = entryOf(pj)?.replace(/^\.\//, '');
+    // Some packages (e.g. @codemirror/legacy-modes) only have subpath entries; map them via EXTRA instead.
+    if (entry && fs.existsSync(path.join(NM, name, entry))) imports[name] = `/vendor/npm/${name}/${entry}`;
   }
   for (const [spec, file] of Object.entries(EXTRA)) imports[spec] = `/vendor/npm/${file}`;
   const json = JSON.stringify({ imports });
