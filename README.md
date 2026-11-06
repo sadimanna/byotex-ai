@@ -177,6 +177,10 @@ Then go to **Settings → Local endpoint**, set the Base URL to `http://127.0.0.
 
 `PORT` (default 4198), `BYOTEX_DATA_DIR` (default `~/.byotex-ai`), `BYOTEX_PASSPHRASE` (derive the encryption key from a passphrase instead of the key file), `BYOTEX_QUIET=1` (silence stdout logging).
 
+## Roadmap
+
+Planned features, in priority order, are in [TODO.md](TODO.md). Ideas and pull requests are welcome.
+
 ## License
 
 [MIT](LICENSE) © 2026 Siladittya Manna
