@@ -892,6 +892,75 @@ async function texSetupDialog(reason) {
   }
 }
 
+/* ------------------------------------------------------------------ history */
+const SOURCE_LABEL = { ai: 'AI edit', editor: 'Editor save', restore: 'Restore', citation: 'Citation added' };
+/** Read-only diff table from a server "view" (same rows as proposals, without checkboxes). */
+function renderDiffView(view) {
+  const tbl = h('table', { class: 'diff' });
+  for (const r of view) {
+    if (r.t === '~') { tbl.append(h('tr', { class: 'skip' }, h('td', { colspan: 4 }, `··· ${r.count} unchanged line${r.count > 1 ? 's' : ''} ···`))); continue; }
+    const cls = r.t === '+' ? 'add' : r.t === '-' ? 'del' : 'ctx';
+    tbl.append(h('tr', { class: cls }, h('td', { class: 'ln' }, r.o ?? ''), h('td', { class: 'ln' }, r.n ?? ''), h('td', { class: 'sg' }, r.t === '=' ? ' ' : r.t), h('td', { class: 'tx' }, r.s || ' ')));
+  }
+  return tbl;
+}
+async function historyDialog() {
+  let entries;
+  try { entries = (await api('GET', '/api/history')).entries; } catch (e) { return msgBox('History', e.message, { warn: true }); }
+  const list = h('div', { class: 'hist-list sunken' });
+  const detail = h('div', { class: 'hist-detail' }, h('div', { class: 'hint' }, entries.length ? 'Select a change to see how the file differs from the version saved before it.' : 'No changes recorded yet in this project. Every AI edit, editor save, restore and added citation will appear here.'));
+  let selected = null;
+  const restoreBtn = h('button', { class: 'btn', disabled: true, onclick: async () => {
+    if (!selected) return;
+    const ok = await confirmBox('Restore version', `Put ${selected.path} back to how it was just before this change (${new Date(selected.time).toLocaleString()})?\n\nThe current version is backed up first, so this can be undone from History too.`);
+    if (!ok) return;
+    try {
+      await api('POST', `/api/history/${selected.id}/restore`);
+      status(`Restored ${selected.path}`);
+      await loadWorkspace(false);
+      await reloadOpenFile();
+      if (prefs.autoCompile) compile();
+      $('#modalLayer').lastElementChild.querySelector('.dlg-btns .btn:last-child').click(); // close; reopen shows the new entry
+      historyDialog();
+    } catch (e) { msgBox('Restore failed', e.message, { warn: true }); }
+  } }, 'Restore This Version');
+  const openBtn = h('button', { class: 'btn', disabled: true, onclick: () => selected && openFile(selected.path) }, 'Open File');
+  for (const e of entries) {
+    const row = h('div', { class: 'hist-row' },
+      h('span', { class: 'hist-time' }, new Date(e.time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })),
+      h('span', { class: `hist-src src-${e.source}` }, SOURCE_LABEL[e.source] || e.source),
+      h('span', { class: 'hist-path' }, e.path),
+      h('span', { class: 'hist-note', title: e.note }, e.note || ''));
+    row.addEventListener('click', async () => {
+      list.querySelectorAll('.hist-row.sel').forEach((x) => x.classList.remove('sel'));
+      row.classList.add('sel');
+      selected = e;
+      restoreBtn.disabled = !e.restorable;
+      openBtn.disabled = false;
+      detail.replaceChildren(h('div', { class: 'hint' }, 'Loading…'));
+      try {
+        const d = await api('GET', `/api/history/${e.id}`);
+        detail.replaceChildren(
+          h('div', { class: 'hist-head' }, `${e.path}: version before this change → the file now`, e.restorable ? '' : '  (no earlier version: this change created the file)'),
+          d.identical ? h('div', { class: 'hint' }, 'The file is currently identical to the version before this change.') : renderDiffView(d.view));
+      } catch (err) { detail.replaceChildren(h('div', { class: 'p-err' }, err.message)); }
+    });
+    list.append(row);
+  }
+  const syncButtons = () => {
+    const btns = $('#modalLayer').lastElementChild?.querySelectorAll('.dlg-btns .btn');
+    if (btns && btns.length === 3) { btns[0].disabled = restoreBtn.disabled; btns[1].disabled = openBtn.disabled; }
+  };
+  new MutationObserver(syncButtons).observe(restoreBtn, { attributes: true });
+  new MutationObserver(syncButtons).observe(openBtn, { attributes: true });
+  setTimeout(syncButtons, 0);
+  await dialog('History', h('div', { class: 'hist' }, list, detail), [
+    { label: 'Restore This Version', onClick: () => { restoreBtn.click(); return false; } },
+    { label: 'Open File', onClick: () => { openBtn.click(); return !!selected; } },
+    { label: 'Close', value: null, default: true },
+  ], { width: 860 });
+}
+
 /* ---------------------------------------------------- missing LaTeX packages */
 const askedMissing = new Set();
 async function copyText(text) {
@@ -1360,6 +1429,7 @@ const commands = {
   'toggle-autocompile': () => setPref('autoCompile', !prefs.autoCompile),
   engine: (arg) => setPref('engine', arg),
   'tex-setup': () => texSetupDialog(),
+  history: historyDialog,
   'test-provider': testProvider,
   'log-clear': () => { logLines.length = 0; $('#console').replaceChildren(); },
   about: () => msgBox('About BYOTeX.AI', 'BYOTeX.AI LaTeX Workspace 0.1\n\nLocal manuscript manager with an LLM gateway and a reviewable diff/apply patch engine.\nBackend: Node.js + Express, bound to 127.0.0.1.'),
@@ -1415,6 +1485,7 @@ function wire() {
     if (mod && !e.shiftKey && e.key.toLowerCase() === 'b') { e.preventDefault(); runCmd('toggle-left'); }
     if (mod && e.shiftKey && e.key.toLowerCase() === 'b') { e.preventDefault(); runCmd('compile'); }
     if (mod && e.shiftKey && e.key.toLowerCase() === 'j') { e.preventDefault(); runCmd('sync-forward'); }
+    if (mod && e.shiftKey && e.key.toLowerCase() === 'h') { e.preventDefault(); runCmd('history'); }
     if (mod && e.shiftKey && (e.key === '>' || e.key === '.')) { e.preventDefault(); runCmd('font-step', 1); }
     if (mod && e.shiftKey && (e.key === '<' || e.key === ',')) { e.preventDefault(); runCmd('font-step', -1); }
   });

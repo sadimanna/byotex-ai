@@ -294,3 +294,15 @@ label { user-select: none; }
 .pkg-cmd { display: flex; gap: 4px; align-items: center; margin-top: 3px; }
 .pkg-cmd code { flex: 1; font: 11px/1.4 var(--mono); background: #fff; box-shadow: var(--sunken); padding: 3px 5px; overflow-x: auto; white-space: nowrap; user-select: all; }
 .pkg-dialog .note { color: #000; margin: 2px 0; }
+
+/* History */
+.hist { display: grid; grid-template-columns: 330px 1fr; gap: 8px; height: 60vh; min-height: 320px; }
+.hist-list { overflow: auto; padding: 2px; }
+.hist-row { display: grid; grid-template-columns: 92px 80px 1fr; grid-template-rows: auto auto; gap: 0 6px; padding: 3px 4px; border-bottom: 1px dotted var(--shadow); cursor: default; }
+.hist-row.sel { background: var(--sel); color: var(--seltext); }
+.hist-row .hist-note { grid-column: 1 / 4; color: var(--muted-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+.hist-row.sel .hist-note { color: var(--seltext); }
+.hist-path { font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-src { font-weight: bold; }
+.hist-detail { overflow: auto; background: var(--face); }
+.hist-head { font-weight: bold; margin-bottom: 4px; }

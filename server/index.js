@@ -145,7 +145,7 @@ app.get('/api/file', route((req, res) => {
 app.put('/api/file', route((req, res) => {
   const { path: rel, content, baseHash } = req.body || {};
   if (typeof content !== 'string') throw ws.httpErr(400, 'content must be a string');
-  const w = ws.writeText(settings.workspaceRoot, rel, content, { backups: settings.backups, expectHash: baseHash === undefined ? undefined : baseHash });
+  const w = ws.writeText(settings.workspaceRoot, rel, content, { backups: settings.backups, expectHash: baseHash === undefined ? undefined : baseHash, reason: { source: 'editor', note: 'Saved from the editor' } });
   logger.info('write', `Saved ${rel} from editor (${w.bytes} B)${w.backup ? ` backup → ${w.backup}` : ''}`);
   rescan();
   res.json(w);
@@ -160,6 +160,39 @@ app.get('/api/raw', route((req, res) => {
   if (!fs.existsSync(abs)) throw ws.httpErr(404, 'Not found');
     const csp = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
   res.set({ 'Content-Security-Policy': csp, 'Cache-Control': 'no-store' }).type(MIME[ext]).send(fs.readFileSync(abs));
+}));
+
+// ---- Change history ---------------------------------------------------------------------
+const { diffLines, analyze } = require('./diff');
+app.get('/api/history', route((req, res) => {
+  const root = fs.realpathSync(settings.workspaceRoot);
+  res.json({ entries: ws.readHistory(root).map((e) => ({ ...e, restorable: !!e.backup && fs.existsSync(path.join(root, e.backup)) })) });
+}));
+function historyEntry(id) {
+  const e = ws.readHistory(settings.workspaceRoot).find((x) => x.id === id);
+  if (!e) throw ws.httpErr(404, 'History entry not found');
+  return e;
+}
+/** Diff from the version saved before this change → the file as it is now. */
+app.get('/api/history/:id', route((req, res) => {
+  const e = historyEntry(req.params.id);
+  const root = fs.realpathSync(settings.workspaceRoot);
+  const before = e.backup ? fs.readFileSync(ws.safeResolve(root, e.backup), 'utf8').replace(/\r\n/g, '\n') : '';
+  const abs = ws.safeResolve(root, e.path);
+  const now = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8').replace(/\r\n/g, '\n') : '';
+  const { hunks, view } = analyze(diffLines(before.split('\n'), now.split('\n')));
+  res.json({ entry: e, hunks: hunks.length, view, identical: before === now });
+}));
+app.post('/api/history/:id/restore', route((req, res) => {
+  const e = historyEntry(req.params.id);
+  if (!e.backup) throw ws.httpErr(400, 'This change created the file, so there is no earlier version to restore.');
+  const root = fs.realpathSync(settings.workspaceRoot);
+  const content = fs.readFileSync(ws.safeResolve(root, e.backup), 'utf8');
+  const when = new Date(e.time).toLocaleString();
+  const w = ws.writeText(root, e.path, content, { backups: true, reason: { source: 'restore', note: `Restored the version from before the change at ${when}` } });
+  logger.info('history', `Restored ${e.path} to its version from before ${when}${w.backup ? ` (current version backed up → ${w.backup})` : ''}`);
+  rescan();
+  res.json(w);
 }));
 
 // ---- LaTeX compile -------------------------------------------------------------
@@ -257,7 +290,7 @@ app.post('/api/chat', route(async (req, res) => {
   if (mode === 'edit') {
     const blocks = patch.parseEditBlocks(full);
     if (blocks.length) {
-      const p = patch.createProposal(settings.workspaceRoot, blocks, { provider, model: cfg.model });
+      const p = patch.createProposal(settings.workspaceRoot, blocks, { provider, model: cfg.model, prompt: last.content.replace(/\s+/g, ' ').slice(0, 160) });
       const pub = patch.publicProposal(p);
       const errs = pub.files.reduce((a, f) => a + f.errors.length + (f.fatal ? 1 : 0), 0);
       logger.info('patch', `Proposal ${p.id}: ${blocks.length} edit block(s) across ${pub.files.length} file(s), ${pub.files.reduce((a, f) => a + f.hunks.length, 0)} hunk(s), ${errs} error(s)`);

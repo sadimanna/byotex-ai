@@ -151,6 +151,32 @@ function assertWritable(rel) {
   if (!WRITABLE_EXT.has(path.extname(rel).toLowerCase())) throw httpErr(403, `Writes are restricted to ${[...WRITABLE_EXT].join(' ')} files: ${rel}`);
 }
 
+
+// ---- Change history -------------------------------------------------------------------------
+// One JSON line per write in <project>/.byotex-backups/history.jsonl, pointing at the backup taken
+// just before it. Restoring a version writes that backup back (itself backed up and recorded).
+const HISTORY_FILE = path.join('.byotex-backups', 'history.jsonl');
+const HISTORY_MAX_READ = 500;
+
+function recordHistory(root, entry) {
+  try {
+    const file = path.join(fs.realpathSync(root), HISTORY_FILE);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.appendFileSync(file, JSON.stringify({ id: crypto.randomBytes(5).toString('hex'), time: new Date().toISOString(), ...entry }) + '\n');
+  } catch (e) {
+    logger.warn('history', `Could not record history: ${e.message}`);
+  }
+}
+
+function readHistory(root) {
+  const file = path.join(fs.realpathSync(root), HISTORY_FILE);
+  if (!fs.existsSync(file)) return [];
+  const lines = fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).slice(-HISTORY_MAX_READ);
+  const out = [];
+  for (const l of lines) { try { out.push(JSON.parse(l)); } catch { /* skip damaged line */ } }
+  return out.reverse(); // newest first
+}
+
 function backupFile(root, rel, content) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const dest = path.join(fs.realpathSync(root), '.byotex-backups', stamp, rel);
@@ -160,7 +186,7 @@ function backupFile(root, rel, content) {
 }
 
 /** Atomic, path-confined write with optional backup of the previous version. */
-function writeText(root, rel, content, { backups = true, expectHash } = {}) {
+function writeText(root, rel, content, { backups = true, expectHash, reason } = {}) {
   assertWritable(rel);
   const abs = safeResolve(root, rel);
   const exists = fs.existsSync(abs);
@@ -175,7 +201,9 @@ function writeText(root, rel, content, { backups = true, expectHash } = {}) {
   const tmp = `${abs}.byotex-tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;
   fs.writeFileSync(tmp, content, 'utf8');
   fs.renameSync(tmp, abs);
+  // reason = { source: 'ai' | 'editor' | 'restore' | 'citation', note? } → recorded in the project's history
+  if (reason) recordHistory(root, { path: rel, source: reason.source, note: reason.note || '', backup, created: !exists, bytes: Buffer.byteLength(content) });
   return { path: rel, bytes: Buffer.byteLength(content), hash: sha256(content), backup, created: !exists };
 }
 
-module.exports = { toPosix, scan, safeResolve, readText, writeText, assertWritable, kindOf, sha256, httpErr, FIGURE_EXT };
+module.exports = { readHistory, toPosix, scan, safeResolve, readText, writeText, assertWritable, kindOf, sha256, httpErr, FIGURE_EXT };

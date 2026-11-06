@@ -164,7 +164,8 @@ function applyProposal(root, id, selection, { backups = true } = {}) {
     try {
       let out = rebuild(f.ops, accepted).join('\n');
       if (f.eol === '\r\n') out = out.replace(/\n/g, '\r\n');
-      const w = ws.writeText(root, f.path, out, { backups, expectHash: f.originalHash });
+      const note = [p.meta?.prompt, p.meta?.model ? `(${p.meta.provider}/${p.meta.model})` : ''].filter(Boolean).join(' ');
+      const w = ws.writeText(root, f.path, out, { backups, expectHash: f.originalHash, reason: { source: 'ai', note } });
       results.push({ path: f.path, status: 'written', hunks: accepted.size, of: f.hunks.length, bytes: w.bytes, backup: w.backup, created: w.created });
       logger.info('write', `${w.created ? 'Created' : 'Wrote'} ${f.path} (${accepted.size}/${f.hunks.length} hunks, ${w.bytes} B)${w.backup ? ` backup → ${w.backup}` : ''}`);
     } catch (e) {
