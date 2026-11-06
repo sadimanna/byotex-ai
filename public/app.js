@@ -318,7 +318,7 @@ function renderTree() {
     tree.append(h('div', { class: 'tn', onclick: () => toggle(key) },
       h('span', { class: 'tog' }, open ? '−' : '+'), h('span', { class: 'ico diag' }), h('span', { class: 'lbl' }, `Problems (${diags.length})`)));
     if (open) for (const d of diags) {
-      tree.append(h('div', { class: 'tn', style: 'padding-left:14px', title: d.message, onclick: () => d.path && openFile(d.path, d.line || undefined) },
+      tree.append(h('div', { class: 'tn', style: 'padding-left:14px', title: d.message, onclick: () => (d.missingFile ? missingPackagesDialog([d.missingFile]) : d.path && openFile(d.path, d.line || undefined)) },
         h('span', { class: 'tog none' }), h('span', { class: 'lbl', style: `color:${d.level === 'error' ? '#800000' : '#000'}` }, `${d.src === 'latex' ? '[TeX] ' : ''}${d.path || ''}${d.line ? `:${d.line}` : ''} ${d.message}`)));
     }
   }
@@ -892,6 +892,64 @@ async function texSetupDialog(reason) {
   }
 }
 
+/* ---------------------------------------------------- missing LaTeX packages */
+const askedMissing = new Set();
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); status('Copied to clipboard'); } catch { status('Copy failed: select the text and copy it manually'); }
+}
+/** "File `x.sty' not found" → find the package with tlmgr → install it, or show the command to run. */
+async function missingPackagesDialog(files) {
+  const body = h('div', { class: 'pkg-dialog' }, h('div', { style: 'margin-bottom:6px' }, `Compiling needs ${files.length === 1 ? 'a file' : 'files'} that your LaTeX doesn't have yet. Looking up which package provides ${files.length === 1 ? 'it' : 'them'}…`));
+  const rows = files.map((f) => {
+    const row = h('fieldset', { class: 'group' }, h('legend', null, f), h('div', { class: 'pkg-msg' }, 'searching…'));
+    body.append(row);
+    return { f, row };
+  });
+  const done = dialog('Missing LaTeX Packages', body, [{ label: 'Compile Again', value: 'compile' }, { label: 'Close', value: null, default: true }], { width: 620 });
+  for (const { f, row } of rows) {
+    const msg = row.querySelector('.pkg-msg');
+    let r;
+    try { r = await api('POST', '/api/tex/package/find', { file: f }); } catch (e) { msg.textContent = e.message; continue; }
+    msg.replaceChildren();
+    if (r.noTlmgr) {
+      msg.append(r.miktex
+        ? 'MiKTeX normally installs missing packages by itself during the compile. If it asked and you declined, open MiKTeX Console → Packages and install it there.'
+        : 'tlmgr (TeX Live\'s package manager) was not found. Install TinyTeX from Build → LaTeX Installation…, or install the package with your system\'s package manager.');
+      continue;
+    }
+    if (r.oldRelease) msg.append(h('div', { class: 'note' }, `Your TeX Live ${r.oldRelease.local} is older than the current ${r.oldRelease.remote}, so packages come from the frozen ${r.oldRelease.local} archive.`));
+    if (!r.packages.length) {
+      msg.append(h('div', null, `No TeX Live package contains ${f}.${r.error ? ` (${r.error})` : ''} Check the spelling in \\usepackage / \\documentclass, or whether the file should be in your project.`));
+      continue;
+    }
+    for (const pkg of r.packages) {
+      const line = h('div', { class: 'pkg-line' }, h('span', null, 'Package: '), h('b', null, pkg), ' ');
+      if (r.writable) {
+        const btn = h('button', { class: 'btn small', onclick: async () => {
+          btn.disabled = true;
+          try { await api('POST', '/api/tex/package/install', { pkg, repo: r.repo }); } catch (e) { btn.disabled = false; return msgBox('Install package', e.message, { warn: true }); }
+          if (prefs.logCollapsed) setPref('logCollapsed', false);
+          btn.textContent = 'Installing…';
+          const poll = setInterval(async () => {
+            const st = await api('GET', '/api/tex/package/status').catch(() => null);
+            if (!st || st.running) return;
+            clearInterval(poll);
+            btn.textContent = st.ok ? 'Installed ✓' : 'Failed';
+            status(st.message);
+          }, 1500);
+        } }, `Install ${pkg}`);
+        line.append(btn);
+      } else {
+        const cmd = r.commands[pkg];
+        line.append(h('div', { class: 'note' }, 'Your TeX Live folder needs administrator rights, so run this in a terminal (it asks for your password):'),
+          h('div', { class: 'pkg-cmd' }, h('code', null, cmd), h('button', { class: 'btn small', onclick: () => copyText(cmd) }, 'Copy')));
+      }
+      msg.append(line);
+    }
+  }
+  if ((await done) === 'compile') compile();
+}
+
 async function startTexInstall() {
   try { await api('POST', '/api/tex/install'); } catch (e) { return msgBox('Install TinyTeX', e.message, { warn: true }); }
   if (prefs.logCollapsed) setPref('logCollapsed', false);
@@ -1246,6 +1304,8 @@ async function compile() {
   try {
     const r = await api('POST', '/api/compile', { file: prefs.mainFile, engine: prefs.engine });
     state.compileDiags = [...r.errors, ...r.warnings].map((d) => ({ ...d, src: 'latex' }));
+    const newMissing = (r.missing || []).filter((f) => !askedMissing.has(f));
+    newMissing.forEach((f) => askedMissing.add(f));
     if (r.errors.length) state.expanded.add('diag');
     renderTree();
     if (r.pdf) {
@@ -1254,6 +1314,7 @@ async function compile() {
     }
     $('#pdfInfo').textContent = `${r.pdf ? r.pdf.split('/').pop() : 'no PDF'} — ${r.ok ? 'OK' : `${r.errors.length} error(s)`}, ${r.warnings.length} warning(s), ${(r.ms / 1000).toFixed(1)}s`;
     status(r.ok ? `Compiled in ${(r.ms / 1000).toFixed(1)}s` : `Compile finished with ${r.errors.length} error(s) — see Problems`);
+    if (newMissing.length) missingPackagesDialog(newMissing); // once per file per session
   } catch (e) {
     $('#pdfInfo').textContent = 'compile failed';
     if (e.code === 'NO_TEX') { $('#pdfInfo').textContent = 'LaTeX not found'; return texSetupDialog('LaTeX (latexmk) was not found on this computer, so the document cannot be compiled yet.'); }

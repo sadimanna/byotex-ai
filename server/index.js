@@ -167,6 +167,12 @@ app.get('/api/compile/status', route((req, res) => res.json({ latexmk: latex.fin
 const opencode = require('./opencode');
 app.get('/api/opencode/status', route(async (req, res) => res.json(await opencode.status())));
 app.post('/api/opencode/install', route((req, res) => res.json(opencode.install())));
+app.post('/api/tex/package/find', route(async (req, res) => {
+  const r = await texenv.findPackage(String(req.body?.file || ''));
+  res.json({ ...r, commands: Object.fromEntries((r.packages || []).map((p) => [p, r.command ? r.command(p) : ''])), command: undefined });
+}));
+app.post('/api/tex/package/install', route((req, res) => res.json(texenv.installPackage(String(req.body?.pkg || ''), req.body?.repo || null))));
+app.get('/api/tex/package/status', route((req, res) => res.json(texenv.pkgStatus())));
 app.get('/api/tex/status', route(async (req, res) => res.json(await texenv.status())));
 app.post('/api/tex/install', route((req, res) => {
   const st = texenv.installTinyTeX((binDir) => {

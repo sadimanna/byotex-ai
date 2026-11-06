@@ -106,6 +106,7 @@ function compile(root, mainRel, engine = 'pdflatex') {
     for (const w of parsed.warnings) if (!w.path) w.path = mainRel;
     for (const e of parsed.errors) if (!e.path) e.path = mainRel;
     const pdfExists = fs.existsSync(pdfAbs);
+    for (const e of parsed.errors) { const f = texenv.missingFileOf(e.message); if (f) e.missingFile = f; }
     const result = {
       ok: code === 0 && !parsed.errors.length,
       code,
@@ -113,6 +114,7 @@ function compile(root, mainRel, engine = 'pdflatex') {
       pdf: pdfExists ? ws.toPosix(path.relative(realRoot, pdfAbs)) : null,
       pdfMtime: pdfExists ? fs.statSync(pdfAbs).mtimeMs : null,
       errors: parsed.errors,
+      missing: [...new Set(parsed.errors.map((e) => e.missingFile).filter(Boolean))],
       warnings: parsed.warnings,
     };
     if (spawnError) result.errors.unshift({ level: 'error', path: mainRel, line: null, message: spawnError });

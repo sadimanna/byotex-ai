@@ -287,3 +287,10 @@ label { user-select: none; }
 
 .oc-status { font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .settings .note.full { grid-column: 1 / 4; white-space: normal; }
+
+/* Missing packages */
+.pkg-dialog .group { margin-top: 10px; padding-top: 14px; }
+.pkg-line { margin: 4px 0; }
+.pkg-cmd { display: flex; gap: 4px; align-items: center; margin-top: 3px; }
+.pkg-cmd code { flex: 1; font: 11px/1.4 var(--mono); background: #fff; box-shadow: var(--sunken); padding: 3px 5px; overflow-x: auto; white-space: nowrap; user-select: all; }
+.pkg-dialog .note { color: #000; margin: 2px 0; }

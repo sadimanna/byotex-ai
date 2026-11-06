@@ -193,4 +193,95 @@ function installTinyTeX(onDone) {
   return installState;
 }
 
-module.exports = { setTexPath, envWithTex, findTool, status, installTinyTeX, tinytexRoot, IS_WIN };
+
+// ---- Missing packages (tlmgr) ------------------------------------------------------------------
+// "File `x.sty' not found" → which TeX Live package provides x.sty → install it (or show the command).
+const MISSING_RE = /File [`'"‘]?([^`'"’\s]+\.(?:sty|cls|bst|bbx|cbx|lbx|def|fd|cfg|clo|ldf|tex))['"’]? not found/;
+const archiveUrl = (year) => `https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${year}/tlnet-final`;
+const ARCHIVE_RE = /^https:\/\/ftp\.math\.utah\.edu\/pub\/tex\/historic\/systems\/texlive\/\d{4}\/tlnet-final$/;
+
+function missingFileOf(message) {
+  const m = MISSING_RE.exec(String(message || ''));
+  return m ? m[1] : null;
+}
+
+/** Run tlmgr and collect its output (no streaming; used for quick queries). */
+function tlmgr(args) {
+  const bin = findTool('tlmgr');
+  if (!bin) return Promise.resolve({ code: -1, out: '', missing: true });
+  return new Promise((resolve) => {
+    const [c, a] = IS_WIN && /\.(bat|cmd)$/i.test(bin) ? ['cmd.exe', ['/c', bin, ...args]] : [bin, args];
+    execFile(c, a, { env: envWithTex(), timeout: 120000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => {
+      resolve({ code: err ? err.code || 1 : 0, out: `${stdout || ''}\n${stderr || ''}` });
+    });
+  });
+}
+
+/** TeX Live root of the tlmgr in use (…/2025basic for /usr/local/texlive/2025basic/bin/<arch>/tlmgr). */
+function tlRoot() {
+  const bin = findTool('tlmgr');
+  if (!bin) return null;
+  try { return path.resolve(fs.realpathSync(bin), '..', '..', '..'); } catch { return null; }
+}
+function canWriteTexLive() {
+  const root = tlRoot();
+  if (!root) return false;
+  try { fs.accessSync(path.join(root, 'texmf-dist'), fs.constants.W_OK); return true; } catch { return false; }
+}
+
+/** Which packages provide `file`? Falls back to the frozen archive when the local TeX Live is an older edition. */
+async function findPackage(file) {
+  if (!/^[\w.+-]+$/.test(file)) throw Object.assign(new Error('Invalid file name'), { status: 400 });
+  if (!findTool('tlmgr')) {
+    const miktex = findTool('miktex') || findTool('mpm');
+    return { file, packages: [], noTlmgr: true, miktex: !!miktex };
+  }
+  let repo = null;
+  let old = null;
+  let r = await tlmgr(['search', '--global', '--file', `/${file}`]);
+  const tooOld = /Local TeX Live \((\d{4})\) is older than remote repository \((\d{4})\)/.exec(r.out);
+  if (tooOld) {
+    old = { local: Number(tooOld[1]), remote: Number(tooOld[2]) };
+    repo = archiveUrl(old.local);
+    logger.info('tex', `Local TeX Live ${old.local} is older than the current ${old.remote}; searching the ${old.local} archive instead`);
+    r = await tlmgr(['--repository', repo, 'search', '--global', '--file', `/${file}`]);
+  }
+  const packages = [];
+  let cur = null;
+  for (const line of r.out.split('\n')) {
+    const head = /^([A-Za-z0-9._+-]+):\s*$/.exec(line);
+    if (head) { cur = head[1]; continue; }
+    if (cur && line.trim().endsWith(`/${file}`) && !packages.includes(cur)) packages.push(cur);
+  }
+  logger.info('tex', `${file} → ${packages.length ? packages.join(', ') : 'no package found'}`);
+  const tl = findTool('tlmgr');
+  return {
+    file,
+    packages,
+    repo,
+    oldRelease: old,
+    writable: canWriteTexLive(),
+    // what to run yourself when the TeX Live folder needs admin rights
+    command: (pkg) => `${IS_WIN ? '' : 'sudo '}"${tl}" ${repo ? `--repository ${repo} ` : ''}install ${pkg}`,
+    error: r.code !== 0 && !packages.length ? r.out.trim().split('\n').slice(-3).join(' ').slice(0, 300) : null,
+  };
+}
+
+let pkgState = { running: false, done: false, ok: null, message: '', pkg: null };
+function installPackage(pkg, repo) {
+  if (!/^[A-Za-z0-9._+-]+$/.test(pkg)) throw Object.assign(new Error('Invalid package name'), { status: 400 });
+  if (repo && !ARCHIVE_RE.test(repo)) throw Object.assign(new Error('Unexpected repository'), { status: 400 });
+  if (pkgState.running) throw Object.assign(new Error('A package installation is already running'), { status: 409 });
+  if (!canWriteTexLive()) throw Object.assign(new Error('This TeX Live folder needs administrator rights; run the shown command in a terminal.'), { status: 403, code: 'NEEDS_ADMIN' });
+  const bin = findTool('tlmgr');
+  pkgState = { running: true, done: false, ok: null, message: `Installing ${pkg}…`, pkg };
+  (async () => {
+    const r = await run(bin, [...(repo ? ['--repository', repo] : []), 'install', pkg], 'install');
+    const ok = r.code === 0;
+    pkgState = { running: false, done: true, ok, pkg, message: ok ? `Installed ${pkg}. Compile again to use it.` : `tlmgr install ${pkg} failed (${r.error || `exit ${r.code}`}). See the Log Console.` };
+    (ok ? logger.info : logger.error)('install', pkgState.message);
+  })();
+  return pkgState;
+}
+
+module.exports = { setTexPath, envWithTex, findTool, status, installTinyTeX, tinytexRoot, IS_WIN, missingFileOf, findPackage, installPackage, pkgStatus: () => pkgState };
