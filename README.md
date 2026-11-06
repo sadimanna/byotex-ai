@@ -37,7 +37,28 @@
 
 ## Quick start
 
-Requirements: [Node.js](https://nodejs.org) 20 or newer. For compiling, a TeX distribution with `latexmk` is also needed; the app can install TinyTeX for you.
+### What you need
+
+**Install these yourself first:**
+
+| | Needed for | How to get it |
+|---|---|---|
+| **[Node.js](https://nodejs.org) 20 or newer** (includes `npm`) | running the app | The installer from nodejs.org, `brew install node`, `winget install OpenJS.NodeJS.LTS`, or your Linux package manager. Check with `node --version`. |
+| **Git** | downloading the code | Usually already installed (`git --version`). Alternatively, use **Code → Download ZIP** on GitHub and unzip it. |
+| **A modern browser** | the interface | Any current Chrome, Edge, Firefox or Safari. |
+
+**Optional, but needed for some features:**
+
+| | Needed for | Notes |
+|---|---|---|
+| **A TeX distribution with `latexmk`** (MacTeX, TeX Live, MiKTeX or TinyTeX) | compiling to PDF, PDF preview, SyncTeX | Editing and AI chat work without it. If it's missing, the app offers to install **TinyTeX** for you (no admin rights) or shows the install command for your system. |
+| **Perl** | `latexmk` (it's a Perl script) | Already on macOS and most Linux desktops; TeX Live on Windows brings its own. Minimal Linux installs may need `sudo apt install perl`. |
+| **An AI provider** | AI chat and edits | Your own API key (Anthropic, OpenAI, Gemini, OpenRouter), a local model server such as [Ollama](https://ollama.com) or LM Studio, or **OpenCode** for free models. If OpenCode isn't installed, the app can install it for you. |
+| **An internet connection** | `npm install`, cloud AI providers, citation search, installing TinyTeX or packages | Editing, compiling and local models work offline once installed. |
+
+**Installed automatically:** `npm install` downloads everything else into `node_modules/`: the web server (Express), the PDF viewer (PDF.js) and the code editor (CodeMirror). There is **no build step**, and nothing is installed system-wide.
+
+### Install and run
 
 ```bash
 git clone https://github.com/sadimanna/byotex-ai.git
