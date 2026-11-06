@@ -1,5 +1,7 @@
 # BYOTeX.AI
 
+[![CI](https://github.com/sadimanna/byotex-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/sadimanna/byotex-ai/actions/workflows/ci.yml)
+
 **Bring your own AI to LaTeX.** BYOTeX.AI is a local LaTeX manuscript workspace, styled as a Windows 98 utility. You ask for changes in plain English, for example "tighten the abstract" or "fix the passive voice in Section 2". The model proposes edits as a **line-by-line diff**, and you accept or reject each change before anything is written to disk.
 
 ![BYOTeX.AI main window: document outline, editor, chat with a proposed diff, and the PDF preview](docs/screenshots/main-window.png)
@@ -32,7 +34,7 @@
 
 ## Quick start
 
-Requirements: [Node.js](https://nodejs.org) 18.17 or newer. For compiling, a TeX distribution with `latexmk` is also needed; the app can install TinyTeX for you.
+Requirements: [Node.js](https://nodejs.org) 20 or newer. For compiling, a TeX distribution with `latexmk` is also needed; the app can install TinyTeX for you.
 
 ```bash
 git clone https://github.com/sadimanna/byotex-ai.git
@@ -48,7 +50,7 @@ Then:
    - choose **OpenCode (free models, no key)**.
 2. Use **File → Open Workspace…** to point the app at your LaTeX project folder. A sample paper is included in `sample/`.
 
-**Status:** an early release, tested on macOS. Windows and Linux are supported in the code but have not been tested yet; bug reports are very welcome.
+**Status:** an early release. Day-to-day use has been on macOS; the automated tests and a server smoke test run on macOS, Windows and Linux for every change (see the CI badge). Bug reports are very welcome.
 
 > **Privacy note on free models:** OpenCode says prompts sent to its *free* models may be stored and used to improve them. Your manuscript text is part of every request, so use your own key or a local model for unpublished or confidential work.
 

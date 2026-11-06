@@ -86,7 +86,7 @@ test('proposal → partial apply → conflict detection → path confinement', (
 
 test('parseLog attributes errors and warnings to source files', () => {
   const { parseLog } = require('../server/compile');
-  const root = '/proj';
+  const root = path.resolve('/proj'); // absolute on every OS (C:\proj on Windows)
   const log = [
     '(./main.tex (/usr/share/texmf/article.cls (/usr/share/texmf/size11.clo))',
     '(./sections/method.tex',
@@ -108,4 +108,17 @@ test('every server module loads (catches syntax errors outside the tested paths)
   for (const m of ['store', 'llm', 'prompt', 'compile', 'texenv', 'opencode', 'workspace', 'patch', 'parser', 'diff', 'logger']) {
     assert.doesNotThrow(() => require(`../server/${m}`), `server/${m}.js failed to load`);
   }
+});
+
+test('compiles the sample paper end to end (skipped when LaTeX is not installed)', async (t) => {
+  const texenv = require('../server/texenv');
+  if (!texenv.findTool('latexmk') || !texenv.findTool('pdflatex')) return t.skip('latexmk/pdflatex not installed');
+  const compile = require('../server/compile');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'byotex-compile-'));
+  fs.cpSync(path.join(__dirname, '..', 'sample'), root, { recursive: true, filter: (src) => !/[\\/]\.byotex-/.test(src) });
+  const r = await compile.compile(root, 'main.tex', 'pdflatex');
+  assert.ok(r.pdf, `no PDF produced: ${JSON.stringify(r.errors)}`);
+  assert.strictEqual(r.errors.length, 0, JSON.stringify(r.errors));
+  // the sample deliberately cites a key that is missing from refs.bib
+  assert.ok(r.warnings.some((w) => /izacard2021fid/.test(w.message) && w.path === 'sections/method.tex'));
 });

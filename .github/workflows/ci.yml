@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      # A small TeX Live so the end-to-end compile test runs too (it is skipped elsewhere).
+      - name: Install LaTeX (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends latexmk texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Smoke test (start the server, load the page, check the token guard)
+        shell: bash
+        env:
+          BYOTEX_DATA_DIR: ${{ runner.temp }}/byotex-data
+        run: |
+          node server/index.js > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4198/ -o page.html && break; sleep 1; done
+          TOKEN=$(grep -o 'name="byotex-token" content="[a-f0-9]\{48\}"' page.html | grep -o '[a-f0-9]\{48\}')
+          test -n "$TOKEN"
+          curl -sf -H "x-byotex-token: $TOKEN" http://127.0.0.1:4198/api/workspace | grep -q '"mainFile":"main.tex"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4198/api/settings)" = "401"
+          curl -sf http://127.0.0.1:4198/vendor/pdfjs/build/pdf.min.mjs -o /dev/null
+          echo "--- server log"; cat server.log

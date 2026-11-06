@@ -9,10 +9,10 @@
     "start:open": "node server/index.js --open",
     "dev": "node --watch-path=server server/index.js",
     "mock-llm": "node scripts/mock-llm.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20"
   },
   "license": "MIT",
   "dependencies": {
