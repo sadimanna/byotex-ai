@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Per-project output written by BYOTeX.AI (compiled PDFs, logs, backups)
+.byotex-build/
+.byotex-backups/
+
+# Editor / OS clutter
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Never commit settings or keys (BYOTeX.AI keeps them in ~/.byotex-ai, outside the repo)
+.env
+.env.*
+*.enc.json
+master.key
+
+# Logs
+npm-debug.log*
+*.log
+!sample/**/*.log
+
+# Local copies kept aside
+*.bak

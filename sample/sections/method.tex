@@ -1,0 +1,12 @@
+\section{Method}
+\label{sec:method}
+Let $q$ be a query and $D = \{d_1, \dots, d_n\}$ a set of passages. We define the prior
+\begin{equation}
+  \label{eq:prior}
+  p(d_i \mid q) \propto \exp\big(\lambda \, s(q, d_i)\big),
+\end{equation}
+where $s$ is a sparse lexical score and $\lambda$ a temperature.
+
+\subsection{Training}
+We train the reader with the prior in Eq.~\eqref{eq:prior} fixed, following~\cite{izacard2021fid}.
+% TODO: add hyperparameters

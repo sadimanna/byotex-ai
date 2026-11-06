@@ -1,0 +1,37 @@
+{
+  "name": "byotex-ai",
+  "version": "0.1.0",
+  "description": "BYOTeX.AI: a local, Windows 98-styled LaTeX workspace. Bring your own AI (Anthropic, OpenAI, Gemini, OpenRouter, local models or free OpenCode models); edits arrive as a reviewable diff.",
+  "main": "server/index.js",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "start:open": "node server/index.js --open",
+    "dev": "node --watch-path=server server/index.js",
+    "mock-llm": "node scripts/mock-llm.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "pdfjs-dist": "^4.10.38"
+  },
+  "author": "Siladittya Manna",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sadimanna/byotex-ai.git"
+  },
+  "keywords": [
+    "latex",
+    "editor",
+    "llm",
+    "ai",
+    "diff",
+    "windows98",
+    "manuscript",
+    "overleaf-alternative"
+  ]
+}

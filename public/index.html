@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="byotex-token" content="__BYOTEX_TOKEN__">
+<title>BYOTeX.AI LaTeX Workspace</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app" class="window">
+  <div class="titlebar">
+    <span class="title-icon"></span>
+    <span class="title-text">BYOTeX.AI &mdash; LaTeX Manuscript Workspace</span>
+    <span class="title-buttons"><button class="tb-btn" tabindex="-1" aria-label="Minimize">_</button><button class="tb-btn" tabindex="-1" aria-label="Maximize">&#9633;</button><button class="tb-btn" tabindex="-1" aria-label="Close">&times;</button></span>
+  </div>
+
+  <div class="menubar" id="menubar">
+    <div class="menu" data-menu="file"><u>F</u>ile
+      <div class="menu-drop">
+        <div class="mi" data-cmd="open-workspace">Open Workspace...</div>
+        <div class="mi" data-cmd="rescan">Rescan Workspace<span class="sc">F5</span></div>
+        <div class="sep"></div>
+        <div class="mi" data-cmd="save">Save<span class="sc">Ctrl+S</span></div>
+        <div class="mi" data-cmd="revert">Revert File</div>
+        <div class="sep"></div>
+        <div class="mi" data-cmd="settings">Settings...</div>
+      </div>
+    </div>
+    <div class="menu" data-menu="chat"><u>C</u>hat
+      <div class="menu-drop">
+        <div class="mi" data-cmd="ctx-file">Add Current File to Context</div>
+        <div class="mi" data-cmd="ctx-node">Add Tree Selection to Context</div>
+        <div class="mi" data-cmd="ctx-sel">Add Editor Selection to Context</div>
+        <div class="mi" data-cmd="ctx-clear">Clear Context</div>
+        <div class="sep"></div>
+        <div class="mi" data-cmd="chat-clear">New Conversation</div>
+      </div>
+    </div>
+    <div class="menu" data-menu="view"><u>V</u>iew
+      <div class="menu-drop">
+        <div class="mi chk" data-cmd="toggle-left">Project Pane<span class="sc">Ctrl+B</span></div>
+        <div class="mi chk" data-cmd="toggle-log">Log Console</div>
+        <div class="sep"></div>
+        <div class="mi radio" data-cmd="tree-view" data-arg="files">Project: Files</div>
+        <div class="mi radio" data-cmd="tree-view" data-arg="outline">Project: Document Outline</div>
+        <div class="sep"></div>
+        <div class="mi radio" data-cmd="layout" data-arg="tabs">Chat: Tab beside Editor</div>
+        <div class="mi radio" data-cmd="layout" data-arg="bottom">Chat: Below Editor</div>
+        <div class="mi radio" data-cmd="layout" data-arg="right">Chat: Right of Editor</div>
+        <div class="sep"></div>
+        <div class="mi radio" data-cmd="pdf-side" data-arg="none">PDF Preview: Hidden</div>
+        <div class="mi radio" data-cmd="pdf-side" data-arg="left">PDF Preview: Left</div>
+        <div class="mi radio" data-cmd="pdf-side" data-arg="right">PDF Preview: Right</div>
+        <div class="sep"></div>
+        <div class="mi" data-cmd="font-dialog">Fonts &amp; Colors...</div>
+        <div class="mi" data-cmd="font-step" data-arg="1">Editor Font Larger<span class="sc">Ctrl+Shift+.</span></div>
+        <div class="mi" data-cmd="font-step" data-arg="-1">Editor Font Smaller<span class="sc">Ctrl+Shift+,</span></div>
+      </div>
+    </div>
+    <div class="menu" data-menu="build"><u>B</u>uild
+      <div class="menu-drop">
+        <div class="mi" data-cmd="compile">Compile PDF<span class="sc">Ctrl+Shift+B</span></div>
+        <div class="mi chk" data-cmd="toggle-autocompile">Compile on Save / Apply</div>
+        <div class="sep"></div>
+        <div class="mi" data-cmd="tex-setup">LaTeX Installation...</div>
+        <div class="sep"></div>
+        <div class="mi radio" data-cmd="engine" data-arg="pdflatex">Engine: pdfLaTeX</div>
+        <div class="mi radio" data-cmd="engine" data-arg="xelatex">Engine: XeLaTeX</div>
+        <div class="mi radio" data-cmd="engine" data-arg="lualatex">Engine: LuaLaTeX</div>
+      </div>
+    </div>
+    <div class="menu" data-menu="tools"><u>T</u>ools
+      <div class="menu-drop">
+        <div class="mi" data-cmd="diagnostics">Print Diagnostics to Log</div>
+        <div class="mi" data-cmd="test-provider">Test Provider Connection</div>
+        <div class="sep"></div>
+        <div class="mi" data-cmd="log-clear">Clear Log Console</div>
+      </div>
+    </div>
+    <div class="menu" data-menu="help"><u>H</u>elp
+      <div class="menu-drop">
+        <div class="mi" data-cmd="about">About BYOTeX.AI...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn" id="leftBtn" data-cmd="toggle-left" title="Show / hide the Project pane (Ctrl+B)">Project</button>
+    <span class="tsep"></span>
+    <button class="btn" data-cmd="open-workspace" title="Open a project folder">Open...</button>
+    <button class="btn" data-cmd="rescan" title="Rescan workspace (F5)">Rescan</button>
+    <button class="btn" data-cmd="save" title="Save (Ctrl+S)">Save</button>
+    <span class="tsep"></span>
+    <button class="btn" id="ctxBtn" data-cmd="ctx-node" title="Add the selected tree node to the chat context">+ Context</button>
+    <span class="tsep"></span>
+    <button class="btn" data-cmd="compile" id="compileBtn" title="Compile with latexmk (Ctrl+Shift+B)">Compile</button>
+    <select id="mainSelect" class="field" title="Main .tex file to compile"></select>
+    <button class="btn" data-cmd="pdf-toggle" id="pdfBtn" title="Show / hide the PDF preview">PDF</button>
+    <span class="tsep"></span>
+    <button class="btn" data-cmd="settings">Settings...</button>
+    <span class="tfill"></span>
+    <label class="tlabel">Provider:</label>
+    <select id="providerSelect" class="field"></select>
+  </div>
+
+  <div class="main" id="main">
+    <div class="left" id="left">
+      <fieldset class="group tree-group" id="treeGroup">
+        <legend>Project</legend>
+        <div class="tree-tabs">
+          <button class="btn small" data-cmd="tree-view" data-arg="files" title="Folders and files as they are on disk">Files</button><button class="btn small" data-cmd="tree-view" data-arg="outline" title="The document in reading order, following input / include">Outline</button>
+          <span class="outline-main" id="outlineMain"></span>
+        </div>
+        <div class="tree sunken" id="tree" tabindex="0"></div>
+      </fieldset>
+      <div class="hsplit" id="hsplit"></div>
+      <fieldset class="group log-group">
+        <legend><button class="mini" data-cmd="toggle-log" id="logToggle" title="Collapse / expand">&minus;</button> Log Console</legend>
+        <div class="log-tools">
+          <label><input type="checkbox" id="logAutoscroll" checked> Autoscroll</label>
+          <label><input type="checkbox" id="logPayloads"> Payloads</label>
+          <select id="logLevel" class="field small"><option value="debug">All</option><option value="info" selected>Info+</option><option value="warn">Warn+</option><option value="error">Errors</option></select>
+          <button class="btn small" data-cmd="log-clear">Clear</button>
+        </div>
+        <div class="console" id="console"></div>
+      </fieldset>
+    </div>
+    <div class="vsplit" id="vsplit"></div>
+    <div class="right" id="right">
+     <div class="pane raised" id="pdfPane" hidden>
+      <div class="pane-cap"><span>PDF Preview</span><span class="cap-info" id="pdfInfo"></span>
+        <button class="btn small" data-cmd="pdf-swap" title="Move to the other side">&#8644;</button>
+        <button class="btn small" data-cmd="pdf-side" data-arg="none" title="Hide">&times;</button></div>
+      <div class="pdf-tools">
+        <button class="btn small" data-cmd="compile" title="Compile (Ctrl+Shift+B)">Compile</button>
+        <span class="tsep"></span>
+        <button class="btn small" data-cmd="pdf-prev" title="Previous page">&#9664;</button>
+        <input type="text" class="field pg" id="pdfPage" value="-" title="Page">
+        <span id="pdfPages">/ -</span>
+        <button class="btn small" data-cmd="pdf-next" title="Next page">&#9654;</button>
+        <span class="tsep"></span>
+        <button class="btn small" data-cmd="pdf-zoom" data-arg="-1" title="Zoom out">&minus;</button>
+        <select class="field small" id="pdfZoom" title="Zoom"></select>
+        <button class="btn small" data-cmd="pdf-zoom" data-arg="1" title="Zoom in">+</button>
+        <span class="tfill"></span>
+        <button class="btn small" data-cmd="sync-forward" title="Show the editor's cursor line in the PDF (Ctrl+Shift+J)">&larr; Source</button>
+      </div>
+      <div class="pdf-body sunken" id="pdfBody" title="Double-click a spot to jump to its source line"></div>
+      <div class="pdf-empty" id="pdfEmpty">No PDF yet.<br><br>Press Compile (Ctrl+Shift+B) to build it with latexmk.</div>
+     </div>
+     <div class="vsplit" id="pdfSplit" hidden></div>
+     <div class="work mode-tabs" id="work">
+      <div class="tabs" id="tabs" role="tablist">
+        <div class="tab active" data-tab="editor" role="tab">Editor</div>
+        <div class="tab" data-tab="chat" role="tab">Chat Inspector</div>
+      </div>
+      <div class="tabpanel raised" id="panel-editor">
+        <div class="pane-cap"><span>Editor</span></div>
+        <div class="ed-head">
+          <span class="ed-path sunken" id="edPath">(no file open)</span>
+          <button class="btn small" data-cmd="save">Save</button>
+          <button class="btn small" data-cmd="revert">Revert</button>
+          <button class="btn small" data-cmd="ctx-sel" title="Send selected lines to chat context">Selection &rarr; Context</button>
+          <button class="btn small" data-cmd="sync-forward" title="Show this line in the PDF (Ctrl+Shift+J)">Show in PDF</button>
+        </div>
+        <div class="ed-body sunken" id="edBody">
+          <pre class="gutter" id="gutter"></pre>
+          <textarea class="code" id="code" spellcheck="false" wrap="off" disabled></textarea>
+          <div class="preview" id="preview" hidden></div>
+        </div>
+      </div>
+      <div class="split" id="chatSplit"></div>
+      <div class="tabpanel raised" id="panel-chat" hidden>
+        <div class="pane-cap"><span>Chat Inspector</span></div>
+        <div class="ctx-bar">
+          <span class="ctx-label">Context:</span>
+          <div class="ctx-list sunken" id="ctxList"></div>
+          <div class="ctx-btns">
+            <button class="btn small" data-cmd="ctx-file">+ File</button>
+            <button class="btn small" data-cmd="ctx-node">+ Node</button>
+            <button class="btn small" data-cmd="ctx-clear">Clear</button>
+            <label class="ctx-auto" title="When nothing is selected, send the file open in the editor"><input type="checkbox" id="ctxAuto" checked> Auto: open file</label>
+          </div>
+        </div>
+        <div class="transcript sunken" id="transcript"></div>
+        <div class="composer">
+          <textarea class="field" id="prompt" rows="4" placeholder="Describe the change (e.g. &quot;Tighten the abstract to 150 words and fix passive voice in Section 2&quot;). Ctrl+Enter to send."></textarea>
+          <div class="composer-side">
+            <label class="tlabel">Mode:</label>
+            <select id="mode" class="field">
+              <option value="edit">Edit (diffs)</option>
+              <option value="ask">Ask (no edits)</option>
+            </select>
+            <button class="btn default" id="sendBtn">Send</button>
+            <button class="btn" id="stopBtn" disabled>Stop</button>
+            <button class="btn" data-cmd="chat-clear">New</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <div class="sb sunken grow" id="sbMsg">Ready</div>
+    <div class="sb sunken" id="sbPos">Ln 1, Col 1</div>
+    <div class="sb sunken" id="sbRoot">-</div>
+    <div class="sb sunken" id="sbProvider">-</div>
+    <div class="sb sunken click" id="sbCtx" title="Click to open the Chat Inspector">Context: -</div>
+    <div class="sb sunken" id="sbTokens">Tokens: 0 in / 0 out</div>
+  </div>
+</div>
+<div id="modalLayer"></div>
+<script src="pdfview.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

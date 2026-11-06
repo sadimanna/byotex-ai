@@ -1,0 +1,48 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\title{Sparse Attention Priors for Long-Context Retrieval}
+\author{A. Researcher \and B. Collaborator}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+In this paper we present a method that is used for the purpose of improving retrieval
+over very long documents. It is shown by our experiments that the method is effective
+and that it can be applied to many different kinds of tasks in a way that is general.
+\end{abstract}
+
+\input{sections/intro}
+\input{sections/method}
+
+\section{Results}
+\label{sec:results}
+Table~\ref{tab:main} summarises recall@10 across the three benchmarks. Our prior
+improves over dense retrieval~\cite{karpukhin2020dense} on every split.
+
+\begin{table}[t]
+  \centering
+  \caption{Recall@10 on long-context benchmarks.}
+  \label{tab:main}
+  \begin{tabular}{lccc}
+    \hline
+    Method & NQ-Long & QASPER & GovRep \\
+    \hline
+    Dense  & 61.2 & 48.9 & 39.4 \\
+    Ours   & \textbf{67.8} & \textbf{55.1} & \textbf{44.0} \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\section{Conclusion}
+\label{sec:conclusion}
+We introduced sparse attention priors. Future work will explore multilingual corpora.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
